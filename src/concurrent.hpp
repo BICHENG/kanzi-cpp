@@ -51,8 +51,9 @@ limitations under the License.
    #include <condition_variable>
    #include <future>
    #include <functional>
-   #if __cplusplus >= 201703L
+   #if (__cplusplus >= 201703L) || (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L)
    #include <tuple>
+   #include <type_traits>
    #endif
    #include <stdexcept>
 
@@ -90,8 +91,8 @@ class Task {
        ThreadPool(int threads = 8);
 
        template<class F, class... Args>
-#if __cplusplus >= 201703L // result_of deprecated from C++17
-       std::future<typename std::invoke_result_t<F, Args...>> schedule(F&& f, Args&&... args);
+#if (__cplusplus >= 201703L) || (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) // result_of deprecated from C++17
+       std::future<std::invoke_result_t<F, Args...>> schedule(F&& f, Args&&... args);
 #else
        std::future<typename std::result_of<F(Args...)>::type> schedule(F&& f, Args&&... args);
 #endif
@@ -142,17 +143,17 @@ class Task {
 
 
    template<class F, class... Args>
-#if __cplusplus >= 201703L // result_of deprecated from C++17
-   std::future<typename std::invoke_result_t<F, Args...> > ThreadPool::schedule(F&& f, Args&&... args)
+#if (__cplusplus >= 201703L) || (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) // result_of deprecated from C++17
+   std::future<std::invoke_result_t<F, Args...> > ThreadPool::schedule(F&& f, Args&&... args)
    {
-       using return_type = typename std::invoke_result<F, Args...>::type;
+       using return_type = std::invoke_result_t<F, Args...>;
 #else
    std::future<typename std::result_of<F(Args...)>::type> ThreadPool::schedule(F&& f, Args&&... args)
    {
        using return_type = typename std::result_of<F(Args...)>::type;
 #endif
 
-       #if __cplusplus >= 201703L
+       #if (__cplusplus >= 201703L) || (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L)
        auto task = std::make_shared<std::packaged_task<return_type()>>(
            [fn = std::forward<F>(f), params = std::make_tuple(std::forward<Args>(args)...)]() mutable -> return_type {
                return std::apply(std::move(fn), std::move(params));
